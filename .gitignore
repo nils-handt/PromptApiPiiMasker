@@ -2,3 +2,7 @@ node_modules/
 dist/
 .npm-cache/
 .superpowers/
+experiments/results/
+experiments/.chrome-profile/
+experiments/.chrome-profile-flag-probe/
+experiments/.chrome-profile-normal-probe/

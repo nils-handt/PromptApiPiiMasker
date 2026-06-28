@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { analyzeJsonDocument, buildJsonAnalysisPrompt } from './jsonPiiAnalyzer';
+import { analyzeJsonDocument, buildJsonAnalysisPrompt, buildJsonAnalysisResponseSchema } from './jsonPiiAnalyzer';
 import { PII_CATEGORIES, type JsonDocumentSource } from '../domain/types';
 
 const document: JsonDocumentSource = {
@@ -57,7 +57,9 @@ ${JSON.stringify({
 
     const findings = await analyzeJsonDocument(document, session);
 
-    expect(session.prompt).toHaveBeenCalledWith(buildJsonAnalysisPrompt(document));
+    expect(session.prompt).toHaveBeenCalledWith(buildJsonAnalysisPrompt(document), {
+      responseConstraint: buildJsonAnalysisResponseSchema(document),
+    });
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({
       id: 'f-1',
@@ -68,6 +70,33 @@ ${JSON.stringify({
       detectionSource: 'json-path',
       reviewStatus: 'pending',
       selectedAction: 'replace-fake',
+    });
+  });
+
+  it('builds a structured output schema with allowed categories and document paths', () => {
+    const schema = buildJsonAnalysisResponseSchema(document);
+
+    expect(schema).toMatchObject({
+      type: 'object',
+      additionalProperties: false,
+      required: ['findings'],
+      properties: {
+        findings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'category', 'originalValue', 'confidence', 'path'],
+            properties: {
+              id: { type: 'string' },
+              category: { type: 'string', enum: PII_CATEGORIES },
+              originalValue: { type: 'string' },
+              confidence: { type: 'number', minimum: 0, maximum: 1 },
+              path: { type: 'string', enum: ['$.customer.name', '$.customer.iban'] },
+            },
+          },
+        },
+      },
     });
   });
 
@@ -119,21 +148,21 @@ ${JSON.stringify({
     await expect(analyzeJsonDocument(document, session)).resolves.toEqual([]);
   });
 
-  it('treats non-array or missing findings as no findings', async () => {
+  it('throws when the response does not include a findings array', async () => {
     await expect(
       analyzeJsonDocument(document, { prompt: vi.fn().mockResolvedValue(JSON.stringify({ findings: {} })) }),
-    ).resolves.toEqual([]);
+    ).rejects.toThrow('Prompt API returned a response that does not match the expected JSON analysis shape.');
 
     await expect(
       analyzeJsonDocument(document, { prompt: vi.fn().mockResolvedValue(JSON.stringify({ summary: 'none' })) }),
-    ).resolves.toEqual([]);
+    ).rejects.toThrow('Prompt API returned a response that does not match the expected JSON analysis shape.');
   });
 
-  it('treats invalid or non-object model responses as no findings', async () => {
+  it('throws when the response is invalid JSON or not an object', async () => {
     for (const responseText of ['not json', '', 'null', '[]', '"text"', '42']) {
       await expect(
         analyzeJsonDocument(document, { prompt: vi.fn().mockResolvedValue(responseText) }),
-      ).resolves.toEqual([]);
+      ).rejects.toThrow('Prompt API returned a response that does not match the expected JSON analysis shape.');
     }
   });
 

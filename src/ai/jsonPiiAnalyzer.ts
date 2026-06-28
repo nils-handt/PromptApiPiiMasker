@@ -1,8 +1,9 @@
 import { normalizeFinding } from '../domain/findingValidation';
 import { PII_CATEGORIES, type Finding, type JsonDocumentSource } from '../domain/types';
+import type { PromptResponseConstraint, PromptSessionOptions } from '../types/chrome-ai';
 
 interface PromptLikeSession {
-  prompt(input: string): Promise<string>;
+  prompt(input: string, options?: PromptSessionOptions): Promise<string>;
 }
 
 interface ModelFinding {
@@ -17,6 +18,8 @@ interface ModelFinding {
 interface ModelResponse {
   findings?: unknown;
 }
+
+const INVALID_RESPONSE_SHAPE_MESSAGE = 'Prompt API returned a response that does not match the expected JSON analysis shape.';
 
 export function buildJsonAnalysisPrompt(document: JsonDocumentSource): string {
   const values = document.values
@@ -41,11 +44,40 @@ export function buildJsonAnalysisPrompt(document: JsonDocumentSource): string {
   ].join('\n');
 }
 
+export function buildJsonAnalysisResponseSchema(document: JsonDocumentSource): PromptResponseConstraint {
+  const paths = Array.from(new Set(document.values.map((node) => node.path)));
+
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['findings'],
+    properties: {
+      findings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['id', 'category', 'originalValue', 'confidence', 'path'],
+          properties: {
+            id: { type: 'string' },
+            category: { type: 'string', enum: PII_CATEGORIES },
+            originalValue: { type: 'string' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            path: { type: 'string', enum: paths },
+          },
+        },
+      },
+    },
+  };
+}
+
 export async function analyzeJsonDocument(
   document: JsonDocumentSource,
   session: PromptLikeSession,
 ): Promise<Finding[]> {
-  const responseText = await session.prompt(buildJsonAnalysisPrompt(document));
+  const responseText = await session.prompt(buildJsonAnalysisPrompt(document), {
+    responseConstraint: buildJsonAnalysisResponseSchema(document),
+  });
   const response = parseModelResponse(responseText);
   const validPaths = new Set(document.values.map((node) => node.path));
 
@@ -76,18 +108,20 @@ function parseModelResponse(text: string): { findings: unknown[] } {
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    return { findings: [] };
+    throw new Error(INVALID_RESPONSE_SHAPE_MESSAGE);
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { findings: [] };
+    throw new Error(INVALID_RESPONSE_SHAPE_MESSAGE);
   }
 
   const response = parsed as ModelResponse;
 
-  return {
-    findings: Array.isArray(response.findings) ? response.findings : [],
-  };
+  if (!Array.isArray(response.findings)) {
+    throw new Error(INVALID_RESPONSE_SHAPE_MESSAGE);
+  }
+
+  return { findings: response.findings };
 }
 
 function stripJsonFence(text: string): string {

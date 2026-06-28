@@ -28,6 +28,13 @@ export interface PromptMessage {
   prefix?: boolean;
 }
 
+export type PromptResponseConstraint = Record<string, unknown>;
+
+export interface PromptSessionOptions {
+  signal?: AbortSignal;
+  responseConstraint?: PromptResponseConstraint;
+}
+
 export interface PromptModelOptions {
   expectedInputs?: PromptExpectedInput[];
   expectedOutputs?: PromptExpectedOutput[];
@@ -39,7 +46,7 @@ export interface PromptCreateOptions extends PromptModelOptions {
 }
 
 export interface PromptSession {
-  prompt(input: string | PromptMessage[]): Promise<string>;
+  prompt(input: string | PromptMessage[], options?: PromptSessionOptions): Promise<string>;
   destroy?: () => void;
 }
 
