@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "experiment:prompt-api:json-shape": "tsx scripts/run-prompt-api-json-shape-experiment.ts",
+    "experiment:prompt-api:speed": "tsx scripts/run-prompt-api-speed-benchmark.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

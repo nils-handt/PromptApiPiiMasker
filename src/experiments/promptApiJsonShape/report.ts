@@ -1,25 +1,12 @@
 import type { Finding } from '../../domain/types';
 import type { PromptApiState } from '../../ai/promptApi';
-import type { PromptAvailability, PromptModelOptions } from '../../types/chrome-ai';
+import type {
+  PromptApiDiagnosticAvailabilityCheck,
+  PromptApiDiagnosticSnapshot,
+} from '../promptApiCommon/diagnostics';
 import type { ShapeValidationResult } from './responseValidator';
 
-export interface PromptApiDiagnosticAvailabilityCheck {
-  label: string;
-  options?: PromptModelOptions;
-  state?: PromptAvailability | 'unsupported';
-  error?: string;
-}
-
-export interface PromptApiDiagnosticSnapshot {
-  userAgent: string;
-  languageModelPresent: boolean;
-  languageModelAvailabilityPresent: boolean;
-  userActivation: {
-    isActive: boolean;
-    hasBeenActive: boolean;
-  };
-  availabilityChecks: PromptApiDiagnosticAvailabilityCheck[];
-}
+export type { PromptApiDiagnosticAvailabilityCheck, PromptApiDiagnosticSnapshot };
 
 export interface JsonShapeExperimentTrial {
   trial: number;

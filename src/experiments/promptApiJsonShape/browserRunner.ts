@@ -1,28 +1,18 @@
 import { analyzeJsonDocument } from '../../ai/jsonPiiAnalyzer';
-import {
-  PROMPT_API_OPTIONS,
-  checkPromptApiStatus,
-  createPromptSession,
-  type PromptApiState,
-} from '../../ai/promptApi';
+import { createPromptSession, type PromptApiState } from '../../ai/promptApi';
 import { parseJsonDocument } from '../../documents/json/jsonAdapter';
 import type { Finding, JsonDocumentSource } from '../../domain/types';
-import type { PromptModelOptions, PromptSessionOptions } from '../../types/chrome-ai';
+import type { PromptSessionOptions } from '../../types/chrome-ai';
+import { normalizePositiveInteger } from '../promptApiCommon/options';
+import { collectPromptApiSetup } from '../promptApiCommon/setup';
 import {
   buildJsonShapeExperimentReport,
   type JsonShapeExperimentReport,
-  type PromptApiDiagnosticAvailabilityCheck,
-  type PromptApiDiagnosticSnapshot,
 } from './report';
 import { validateJsonAnalysisResponseShape, type ShapeValidationResult } from './responseValidator';
 
 export const DEFAULT_SAMPLE_JSON =
   '{"name":"Kelly Doe","email":"kdoe@example.com","id":"12324","phone":"5551234567"}';
-
-const TEXT_ONLY_PROMPT_API_OPTIONS = {
-  expectedInputs: [{ type: 'text' as const, languages: ['en'] }],
-  expectedOutputs: [{ type: 'text' as const, languages: ['en'] }],
-} satisfies PromptModelOptions;
 
 export interface PromptApiJsonShapeExperimentOptions {
   runs?: number;
@@ -84,19 +74,16 @@ export async function runPromptApiJsonShapeExperiment(
     type: 'application/json',
   }));
   const validPaths = new Set(document.values.map((node) => node.path));
-  emitProgress({ type: 'setup', message: 'collecting Prompt API diagnostics' });
-  const diagnostics = await collectPromptApiDiagnostics();
-  emitProgress({ type: 'setup', message: 'checking Prompt API availability' });
-  const status = await checkPromptApiStatus();
+  const { diagnostics, status, setupError } = await collectPromptApiSetup(emitProgress);
 
-  if (status.state === 'unsupported' || status.state === 'unavailable') {
+  if (setupError) {
     emitProgress({ type: 'setup', message: `Prompt API setup failed: ${status.message}` });
     return buildJsonShapeExperimentReport({
       startedAt,
       finishedAt: new Date().toISOString(),
       sampleJson,
       runsRequested: runs,
-      setupError: status.message,
+      setupError,
       diagnostics,
       trials: [],
     });
@@ -130,58 +117,6 @@ export async function runPromptApiJsonShapeExperiment(
     diagnostics,
     trials,
   });
-}
-
-async function collectPromptApiDiagnostics(): Promise<PromptApiDiagnosticSnapshot> {
-  const userActivation = (
-    navigator as Navigator & {
-      userActivation?: {
-        isActive?: boolean;
-        hasBeenActive?: boolean;
-      };
-    }
-  ).userActivation;
-  const languageModelPresent = Boolean(globalThis.LanguageModel);
-  const languageModelAvailabilityPresent =
-    Boolean(globalThis.LanguageModel) && typeof globalThis.LanguageModel?.availability === 'function';
-
-  return {
-    userAgent: navigator.userAgent,
-    languageModelPresent,
-    languageModelAvailabilityPresent,
-    userActivation: {
-      isActive: Boolean(userActivation?.isActive),
-      hasBeenActive: Boolean(userActivation?.hasBeenActive),
-    },
-    availabilityChecks: [
-      await checkAvailability('no-options'),
-      await checkAvailability('text-only', TEXT_ONLY_PROMPT_API_OPTIONS),
-      await checkAvailability('app-options', PROMPT_API_OPTIONS),
-    ],
-  };
-}
-
-async function checkAvailability(
-  label: string,
-  options?: PromptModelOptions,
-): Promise<PromptApiDiagnosticAvailabilityCheck> {
-  if (!globalThis.LanguageModel || typeof globalThis.LanguageModel.availability !== 'function') {
-    return { label, options, state: 'unsupported' };
-  }
-
-  try {
-    return {
-      label,
-      options,
-      state: await globalThis.LanguageModel.availability(options),
-    };
-  } catch (error) {
-    return {
-      label,
-      options,
-      error: error instanceof Error ? error.message : 'Availability check failed.',
-    };
-  }
 }
 
 async function runTrialWithTimeout(
@@ -261,14 +196,6 @@ async function runTrial(
   } finally {
     session.destroy?.();
   }
-}
-
-function normalizePositiveInteger(value: number | undefined, fallback: number): number {
-  if (value === undefined || !Number.isFinite(value) || value < 1) {
-    return fallback;
-  }
-
-  return Math.floor(value);
 }
 
 function emitProgress(event: PromptApiJsonShapeProgressEvent): void {
