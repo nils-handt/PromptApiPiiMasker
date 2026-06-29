@@ -6,12 +6,12 @@ interface FileImporterProps {
 export function FileImporter({ onFileSelected, error }: FileImporterProps) {
   return (
     <section className="panel import-panel">
-      <h2>Import JSON</h2>
+      <h2>Import File</h2>
       <label className="file-input-label">
-        Choose JSON file
+        Choose JSON or image file
         <input
-          aria-label="Import JSON"
-          accept="application/json,.json"
+          aria-label="Import file"
+          accept="application/json,.json,image/*"
           type="file"
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];

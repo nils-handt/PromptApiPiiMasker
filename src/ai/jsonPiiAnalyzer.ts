@@ -1,3 +1,4 @@
+import { ensureUniqueFindingIds } from '../domain/findingIds';
 import { normalizeFinding } from '../domain/findingValidation';
 import { PII_CATEGORIES, type Finding, type JsonDocumentSource } from '../domain/types';
 import type { PromptResponseConstraint, PromptSessionOptions } from '../types/chrome-ai';
@@ -81,7 +82,7 @@ export async function analyzeJsonDocument(
   const response = parseModelResponse(responseText);
   const validPaths = new Set(document.values.map((node) => node.path));
 
-  return response.findings
+  const findings = response.findings
     .filter((finding): finding is ModelFinding & { path: string } => isModelFindingWithKnownPath(finding, validPaths))
     .map((finding) => {
       try {
@@ -99,6 +100,8 @@ export async function analyzeJsonDocument(
       }
     })
     .filter((finding): finding is Finding => Boolean(finding));
+
+  return ensureUniqueFindingIds(findings);
 }
 
 function parseModelResponse(text: string): { findings: unknown[] } {

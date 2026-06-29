@@ -1,6 +1,6 @@
-import { type ExportReportEntry, type Finding, type JsonDocumentSource } from '../domain/types';
+import { type AnalyzableDocumentSource, type ExportReportEntry, type Finding } from '../domain/types';
 
-export function buildExportReport(document: JsonDocumentSource, findings: Finding[]): ExportReportEntry[] {
+export function buildExportReport(document: AnalyzableDocumentSource, findings: Finding[]): ExportReportEntry[] {
   return findings.map((finding) => ({
     sourceFileName: document.fileName,
     findingId: finding.id,

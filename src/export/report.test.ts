@@ -40,4 +40,25 @@ describe('buildExportReport', () => {
       },
     ]);
   });
+
+  it('records image findings with visual detection source', () => {
+    const imageDocument = {
+      id: 'image-1',
+      fileName: 'badge.png',
+      mediaType: 'image',
+      file: new File(['image'], 'badge.png', { type: 'image/png' }),
+      mimeType: 'image/png',
+      objectUrl: 'blob:badge',
+      width: 300,
+      height: 200,
+    } as const;
+
+    expect(buildExportReport(imageDocument, [{ ...finding, detectionSource: 'visual' }])).toMatchObject([
+      {
+        sourceFileName: 'badge.png',
+        detectionSource: 'visual',
+        status: 'exported',
+      },
+    ]);
+  });
 });

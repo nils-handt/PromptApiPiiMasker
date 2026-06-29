@@ -53,6 +53,38 @@ describe('normalizeFinding', () => {
     ).toThrow(/json path/i);
   });
 
+  it('accepts a valid visual region finding', () => {
+    const finding = normalizeFinding({
+      id: 'img-1',
+      category: 'name',
+      originalValue: 'Nora Weber',
+      confidence: 0.84,
+      location: { kind: 'region', x: 10, y: 20, width: 120, height: 36 },
+      detectionSource: 'visual',
+    });
+
+    expect(finding).toMatchObject({
+      id: 'img-1',
+      category: 'name',
+      location: { kind: 'region', x: 10, y: 20, width: 120, height: 36 },
+      detectionSource: 'visual',
+      reviewStatus: 'pending',
+      selectedAction: 'replace-fake',
+    });
+  });
+
+  it('rejects visual findings without a usable region', () => {
+    expect(() =>
+      normalizeFinding({
+        id: 'img-2',
+        category: 'email',
+        confidence: 0.7,
+        location: { kind: 'none' },
+        detectionSource: 'visual',
+      }),
+    ).toThrow(/region/i);
+  });
+
   it('rejects malformed root inputs', () => {
     expect(() => normalizeFinding(null)).toThrow(/finding must be an object/i);
     expect(() => normalizeFinding([])).toThrow(/finding must be an object/i);

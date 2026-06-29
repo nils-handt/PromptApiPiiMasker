@@ -73,6 +73,71 @@ ${JSON.stringify({
     });
   });
 
+  it('keeps distinct findings when the model repeats the same example id', async () => {
+    const duplicateIdDocument: JsonDocumentSource = {
+      id: 'doc-duplicates',
+      fileName: 'customers.json',
+      mediaType: 'application/json',
+      rawText:
+        '[{"customerName":"Alex Chen","customerEmail":"alex.chen0@example.com","customerPhone":"+1-555-100-1000"}]',
+      data: [
+        {
+          customerName: 'Alex Chen',
+          customerEmail: 'alex.chen0@example.com',
+          customerPhone: '+1-555-100-1000',
+        },
+      ],
+      values: [
+        { path: '$[0].customerName', parentKey: 'customerName', value: 'Alex Chen' },
+        { path: '$[0].customerEmail', parentKey: 'customerEmail', value: 'alex.chen0@example.com' },
+        { path: '$[0].customerPhone', parentKey: 'customerPhone', value: '+1-555-100-1000' },
+      ],
+    };
+    const session = {
+      prompt: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          findings: [
+            {
+              id: 'short-stable-id',
+              category: 'name',
+              originalValue: 'Alex Chen',
+              confidence: 0.95,
+              path: '$[0].customerName',
+            },
+            {
+              id: 'short-stable-id',
+              category: 'email',
+              originalValue: 'alex.chen0@example.com',
+              confidence: 0.9,
+              path: '$[0].customerEmail',
+            },
+            {
+              id: 'short-stable-id',
+              category: 'phone',
+              originalValue: '+1-555-100-1000',
+              confidence: 0.9,
+              path: '$[0].customerPhone',
+            },
+          ],
+        }),
+      ),
+    };
+
+    const findings = await analyzeJsonDocument(duplicateIdDocument, session);
+
+    expect(findings).toHaveLength(3);
+    expect(findings.map((finding) => finding.id)).toEqual([
+      'short-stable-id',
+      'short-stable-id-2',
+      'short-stable-id-3',
+    ]);
+    expect(findings.map((finding) => finding.location)).toEqual([
+      { kind: 'json-path', path: '$[0].customerName' },
+      { kind: 'json-path', path: '$[0].customerEmail' },
+      { kind: 'json-path', path: '$[0].customerPhone' },
+    ]);
+  });
+
   it('builds a structured output schema with allowed categories and document paths', () => {
     const schema = buildJsonAnalysisResponseSchema(document);
 

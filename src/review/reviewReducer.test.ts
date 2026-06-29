@@ -73,4 +73,17 @@ describe('reviewReducer', () => {
       replacementMap: {},
     });
   });
+
+  it('assigns unique ids when incoming findings have duplicate model ids', () => {
+    const state = createInitialReviewState([
+      { ...baseFinding, id: 'short-stable-id', originalValue: 'MARTIN' },
+      { ...baseFinding, id: 'short-stable-id', originalValue: 'SARAH' },
+    ]);
+
+    expect(state.findings.map((finding) => finding.id)).toEqual(['short-stable-id', 'short-stable-id-2']);
+
+    const next = reviewReducer(state, { type: 'approve-finding', findingId: 'short-stable-id' });
+
+    expect(next.findings.map((finding) => finding.reviewStatus)).toEqual(['approved', 'pending']);
+  });
 });

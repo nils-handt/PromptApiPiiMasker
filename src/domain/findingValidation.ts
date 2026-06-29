@@ -35,6 +35,10 @@ export function normalizeFinding(raw: unknown): Finding {
     throw new Error('JSON path findings must include a JSON path location.');
   }
 
+  if (detectionSource === 'visual' && location.kind !== 'region') {
+    throw new Error('Visual findings must include a region location.');
+  }
+
   return {
     id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : crypto.randomUUID(),
     category,

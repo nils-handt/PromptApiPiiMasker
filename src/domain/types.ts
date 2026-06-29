@@ -51,6 +51,17 @@ export interface JsonDocumentSource extends DocumentSource {
   values: JsonValueNode[];
 }
 
+export interface ImageDocumentSource extends DocumentSource {
+  mediaType: 'image';
+  file: File;
+  mimeType: string;
+  objectUrl: string;
+  width: number;
+  height: number;
+}
+
+export type AnalyzableDocumentSource = JsonDocumentSource | ImageDocumentSource;
+
 export interface JsonValueNode {
   path: string;
   value: string | number | boolean | null;

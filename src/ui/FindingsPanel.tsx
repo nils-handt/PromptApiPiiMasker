@@ -18,7 +18,7 @@ export function FindingsPanel({ findings, dispatchReview }: FindingsPanelProps) 
     <section className="panel findings-panel">
       <h2>Findings</h2>
       {findings.length === 0 ? (
-        <p>No findings yet. Import JSON and run analysis.</p>
+        <p>No findings yet. Import a file and run analysis.</p>
       ) : (
         <ul className="finding-list">
           {findings.map((finding) => (

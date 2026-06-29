@@ -1,3 +1,4 @@
+import { ensureUniqueFindingIds } from '../domain/findingIds';
 import { type Finding, type MaskingAction, type PiiCategory } from '../domain/types';
 
 export interface ReviewState {
@@ -40,7 +41,7 @@ const FAKE_PREFIX_BY_CATEGORY: Record<PiiCategory, string> = {
 };
 
 export function createInitialReviewState(findings: Finding[]): ReviewState {
-  return { findings, replacementMap: {} };
+  return { findings: ensureUniqueFindingIds(findings), replacementMap: {} };
 }
 
 export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewState {

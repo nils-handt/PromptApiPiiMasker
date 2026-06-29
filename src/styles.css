@@ -56,11 +56,17 @@ select {
 }
 
 .workbench-grid {
+  align-items: start;
   display: grid;
   gap: 16px;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr) minmax(280px, 360px);
   margin: 0 auto;
   max-width: 1280px;
+}
+
+.findings-panel {
+  max-height: calc(100vh - 128px);
+  overflow-y: auto;
 }
 
 .panel {
@@ -177,6 +183,40 @@ button:disabled {
 .summary-list dt,
 .summary-list dd {
   margin: 0;
+}
+
+.image-preview-frame {
+  background: #101612;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.image-preview-frame img {
+  display: block;
+  height: 100%;
+  object-fit: fill;
+  width: 100%;
+}
+
+.region-highlight {
+  border: 2px solid #d8a100;
+  box-sizing: border-box;
+  pointer-events: none;
+  position: absolute;
+}
+
+.region-highlight.status-approved {
+  border-color: #168447;
+}
+
+.region-highlight.status-ignored {
+  border-color: #707870;
+}
+
+.region-highlight.status-needs-location-review {
+  border-color: #b73737;
 }
 
 @media (max-width: 900px) {
